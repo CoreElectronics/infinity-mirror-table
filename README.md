@@ -1,1 +1,1 @@
-#infinity-mirror-table
+# Infinity Mirror Table
