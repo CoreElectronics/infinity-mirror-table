@@ -1,1 +1,0 @@
-# Infinity Mirror Table
