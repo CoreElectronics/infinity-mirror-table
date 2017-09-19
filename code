@@ -1,8 +1,5 @@
-// This #include statement was automatically added by the Particle IDE.
-#include <neopixel.h>
-
 /*
- * v1.1
+ * v1.2
  *
  * This program drives the Core Electronics Infinity-Mirror project
  * Powered by Core Electronics
@@ -41,7 +38,7 @@
 #define STATE_SOLID 3
 
 
-SYSTEM_MODE(AUTOMATIC);
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
 /*
  * Hardware Definitions
@@ -63,6 +60,14 @@ void setup()
 
 void loop()
 {
+    
+    if (System.buttonPushed() > 1) {
+        if( !Particle.connected() ){
+            Particle.connect();
+        }
+    }
+    
+    
     // Read potentiometer values for user-input
     int state = getState(pot_1);    // Select the operation mode
     int opt1 = analogRead(pot_2);   // Select animation speed
