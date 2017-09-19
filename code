@@ -1,5 +1,8 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <neopixel.h>
+
 /*
- * v1.0
+ * v1.1
  *
  * This program drives the Core Electronics Infinity-Mirror project
  * Powered by Core Electronics
@@ -31,6 +34,13 @@
 // Particle use 12bit ADCs. If you wish to port to a different micro you might need to redefine the ADC precision
 #define ADC_PREC 4095
 
+// States for the state-machine
+#define STATE_OFF 0
+#define STATE_RAINBOW 1
+#define STATE_COMET 2
+#define STATE_SOLID 3
+
+
 SYSTEM_MODE(AUTOMATIC);
 
 /*
@@ -61,19 +71,19 @@ void loop()
     
     // State Machine
     switch(state){
-        case 0:
+        case STATE_OFF:
             clearStrip();   // "Off" state.
             break;
         
-        case 1:
+        case STATE_RAINBOW:
             rainbow(pot_2); // Adafruit's rainbow demo, modified for seamless wraparound. We are passing the Pot # instead of the option because delay value needs to be updated WITHIN the rainbow function. Not just at the start of each main loop.
             break;
         
-        case 2:
+        case STATE_COMET:
             demo(); // An under-construction comet demo.
             break;
             
-        case 3:
+        case STATE_SOLID:
             solid(opt1, opt2); // Show user-set solid colour.
             break;
         
@@ -88,13 +98,13 @@ void loop()
 int getState(int pot){
     float val = analogRead(pot);
     if (val < ADC_PREC / 4) {
-        return 0;
+        return STATE_OFF;
     } else if (val < ADC_PREC / 2) {
-        return 1;
+        return STATE_RAINBOW;
     } else if (val < 3*ADC_PREC / 4) {
-        return 2;
+        return STATE_COMET;
     } else {
-        return 3;
+        return STATE_SOLID;
     }
 }
 
@@ -121,6 +131,7 @@ void demo(void){
         
         strip.show();
         delay(5);
+        if(getState(pot_1) != STATE_COMET) break; // Check if mode knob is still on this mode
     }
 }
 
@@ -193,8 +204,9 @@ void rainbow(int pot) {
         strip.setPixelColor( i, Wheel(int(i*(colStep)+baseCol) & 255) ); // This line seamlessly wraps the colour around the table.
     }
     strip.show();
-    
     delay(getDelay(pot));
+    
+    if(getState(pot_1) != STATE_RAINBOW) break; // Check if mode knob is still on this mode
   }
 }
 
