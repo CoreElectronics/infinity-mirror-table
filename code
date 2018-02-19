@@ -26,7 +26,7 @@
 
 // Define LED strip parameters
 #define PIXEL_PIN D0
-#define PIXEL_COUNT 176
+#define PIXEL_COUNT 160
 
 // Particle use 12bit ADCs. If you wish to port to a different micro you might need to redefine the ADC precision
 #define ADC_PREC 4095
@@ -34,8 +34,9 @@
 // States for the state-machine
 #define STATE_OFF 0
 #define STATE_RAINBOW 1
-#define STATE_COMET 2
-#define STATE_SOLID 3
+#define STATE_SOLID 2
+#define STATE_COMET 3
+
 
 
 SYSTEM_MODE(SEMI_AUTOMATIC);
@@ -84,14 +85,14 @@ void loop()
             rainbow(pot_2); // Adafruit's rainbow demo, modified for seamless wraparound. We are passing the Pot # instead of the option because delay value needs to be updated WITHIN the rainbow function. Not just at the start of each main loop.
             break;
         
+        case STATE_SOLID:
+            solid(opt1, opt2); // Show user-set solid colour.
+            break;
+            
         case STATE_COMET:
             demo(); // An under-construction comet demo.
             break;
             
-        case STATE_SOLID:
-            solid(opt1, opt2); // Show user-set solid colour.
-            break;
-        
         default:
             break;
         
@@ -107,9 +108,9 @@ int getState(int pot){
     } else if (val < ADC_PREC / 2) {
         return STATE_RAINBOW;
     } else if (val < 3*ADC_PREC / 4) {
-        return STATE_COMET;
-    } else {
         return STATE_SOLID;
+    } else {
+        return STATE_COMET;
     }
 }
 
