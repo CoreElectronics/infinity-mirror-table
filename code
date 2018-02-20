@@ -100,10 +100,40 @@ void loop()
 }
 
 
-// Break potentiometer rotation into four sectors for setting mode
+/* Break potentiometer rotation into four sectors for setting mode
+ * edit - Breaking pot into flexible segmentation for ease of adding/removing modes. */
 int getState(int pot){
     float val = analogRead(pot);
-    if (val < ADC_PREC / 4) {
+
+    // Add all selectable modes to the array in the order you want them to appear via the pot .. you are been warned ;)
+    string a[] = {  "STATE_OFF",
+                    "STATE_RAINBOW",
+                    "STATE_SOLID",
+                    "STATE_COMET"
+    };
+    float aValNum = (sizeof(a)/sizeof(*a));     // Number of Array Values
+    float PotSegLength = ADC_PREC / aValNum;    // Holds the segment length of each state assigned to the pot
+    float PrevSegMax;   // Use for holding the "maximum value" of the preceeding segment being evaluated
+    float CurrSegMax;   // Current segment's Maximum value
+    int i;              // iteration for loop
+    
+    for (i = 0; i < aValNum; i++ ) {
+        CurrSegMax = (i + 1) * PotSegLength;    // Set the current segment maximum
+        if (i > 0) {
+            PrevSegMax = (i * PotSegLength);    // Set the previous segment maximum
+        }
+        else {
+            PrevSegMax = 0;                     // first segment minimum
+        }
+
+        if (val > PrevSegMax && val <= CurrSegMax) {
+            //std::cout << "Seg ~Min [" << PrevSegMax << "]. Seg Max[" << CurrSegMax << "]." << std::endl;
+            //std::cout << "User Input[" << val << "] within the segment of this mode: [" << a[i] << "]." << std::endl;
+            return a[i];
+        }
+    }
+        
+    /*if (val < ADC_PREC / 4) {
         return STATE_OFF;
     } else if (val < ADC_PREC / 2) {
         return STATE_RAINBOW;
@@ -111,7 +141,7 @@ int getState(int pot){
         return STATE_SOLID;
     } else {
         return STATE_COMET;
-    }
+    }*/
 }
 
 
