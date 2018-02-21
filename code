@@ -1,5 +1,8 @@
+// This #include statement was automatically added by the Particle IDE.
+#include <neopixel.h>
+
 /*
- * v1.2
+ * v1.3
  *
  * This program drives the Core Electronics Infinity-Mirror project
  * Powered by Core Electronics
@@ -24,22 +27,30 @@
 #include "neopixel.h"
 #include <math.h>
 
-// Define LED strip parameters
-#define PIXEL_PIN D0
-#define PIXEL_COUNT 160
-
-// Particle use 12bit ADCs. If you wish to port to a different micro you might need to redefine the ADC precision
-#define ADC_PREC 4095
-
+/*******************************************************************************
+* Global Variables
+*
+******************************************************************************/
 // States for the state-machine
-#define STATE_OFF 0
-#define STATE_RAINBOW 1
-#define STATE_SOLID 2
-#define STATE_COMET 3
+enum statevar {
+  state_off,
+  state_rainbow,
+  state_solid,
+  state_comet,
+};
 
+// Set the States into an array to break the potentiometer into sectors without hardcoding them
+// The order of States in the array == sector order.
+const int modeArray[] = {state_off, state_rainbow, state_solid, state_comet};
 
+static uint8_t state; // The state that the user demands
+static uint8_t state_current; // The state currently being executed
 
-SYSTEM_MODE(SEMI_AUTOMATIC);
+const int strip_pin = 0; // The digital pin that drives the LED strip
+const int num_leds = 160; // Number of LEDs in the strip. Shouldn't need changing unless you hack the hardware
+const int ADC_precision = 4095; // Particle use 12bit ADCs. If you wish to port to a different platform you might need to redefine the ADC precision eg: 1023 for Arduino UNO
+
+SYSTEM_MODE(SEMI_AUTOMATIC); // Release state
 
 /*
  * Hardware Definitions
@@ -49,7 +60,7 @@ SYSTEM_MODE(SEMI_AUTOMATIC);
 int pot_1 = 2; // left    - selects the mode
 int pot_2 = 1; // middle  - use varies between demos. Can control animation speed or colour
 int pot_3 = 0; // right   - use varies between demos. Can control brightness of white
-Adafruit_NeoPixel strip(PIXEL_COUNT, PIXEL_PIN);
+Adafruit_NeoPixel strip(num_leds, strip_pin, WS2812);
 
 
 void setup()
@@ -58,7 +69,7 @@ void setup()
     strip.show(); // Initialize all pixels to off
 }
 
-
+/* **************** LOOP ****************  */
 void loop()
 {
     
@@ -71,25 +82,26 @@ void loop()
     
     // Read potentiometer values for user-input
     int state = getState(pot_1);    // Select the operation mode
+    //int state = getFlexState(pot_1);
     int opt1 = analogRead(pot_2);   // Select animation speed
     int opt2 = analogRead(pot_3);   // A general-purpose option for other effects
     
     
     // State Machine
     switch(state){
-        case STATE_OFF:
+        case state_off:
             clearStrip();   // "Off" state.
             break;
         
-        case STATE_RAINBOW:
+        case state_rainbow:
             rainbow(pot_2); // Adafruit's rainbow demo, modified for seamless wraparound. We are passing the Pot # instead of the option because delay value needs to be updated WITHIN the rainbow function. Not just at the start of each main loop.
             break;
         
-        case STATE_SOLID:
+        case state_solid:
             solid(opt1, opt2); // Show user-set solid colour.
             break;
             
-        case STATE_COMET:
+        case state_comet:
             demo(); // An under-construction comet demo.
             break;
             
@@ -99,56 +111,38 @@ void loop()
     }
 }
 
-
-/* Break potentiometer rotation into four sectors for setting mode
- * edit - Breaking pot into flexible segmentation for ease of adding/removing modes. */
-int getState(int pot){
+/* **************** FUNCTIONS ****************  */
+// Break potentiometer rotation into flexible sectors based on the constant modeArray
+int getState(int pot)
+{
     float val = analogRead(pot);
-
-    // Add all selectable modes to the array in the order you want them to appear via the pot .. you are been warned ;)
-    string a[] = {  "STATE_OFF",
-                    "STATE_RAINBOW",
-                    "STATE_SOLID",
-                    "STATE_COMET"
-    };
-    float aValNum = (sizeof(a)/sizeof(*a));     // Number of Array Values
-    float PotSegLength = ADC_PREC / aValNum;    // Holds the segment length of each state assigned to the pot
-    float PrevSegMax;   // Use for holding the "maximum value" of the preceeding segment being evaluated
-    float CurrSegMax;   // Current segment's Maximum value
-    int i;              // iteration for loop
+    float aValNum(sizeof(modeArray)/sizeof(*modeArray));
+    float potSegLength(ADC_precision/aValNum);
     
-    for (i = 0; i < aValNum; i++ ) {
-        CurrSegMax = (i + 1) * PotSegLength;    // Set the current segment maximum
+    float prevSegMax;
+    float currSegMax;
+    int i;
+    
+    for (i = 0; i < aValNum; i++ ) 
+    {
+        currSegMax = (i + 1) * potSegLength;    // Set the current segment maximum
         if (i > 0) {
-            PrevSegMax = (i * PotSegLength);    // Set the previous segment maximum
+            prevSegMax = (i * potSegLength);    // Set the previous segment maximum
         }
         else {
-            PrevSegMax = 0;                     // first segment minimum
+            prevSegMax = 0;                     // first segment minimum
         }
 
-        if (val > PrevSegMax && val <= CurrSegMax) {
-            //std::cout << "Seg ~Min [" << PrevSegMax << "]. Seg Max[" << CurrSegMax << "]." << std::endl;
-            //std::cout << "User Input[" << val << "] within the segment of this mode: [" << a[i] << "]." << std::endl;
-            return a[i];
+        if (val > prevSegMax && val <= currSegMax) {
+            return modeArray[i];
         }
     }
-        
-    /*if (val < ADC_PREC / 4) {
-        return STATE_OFF;
-    } else if (val < ADC_PREC / 2) {
-        return STATE_RAINBOW;
-    } else if (val < 3*ADC_PREC / 4) {
-        return STATE_SOLID;
-    } else {
-        return STATE_COMET;
-    }*/
 }
-
 
 // Convert an ADC reading into a 0-100ms delay
 int getDelay(int pot){
     float potVal = analogRead(pot);
-    return map(potVal,0,ADC_PREC,100,0);
+    return map(potVal,0,ADC_precision,100,0);
 }
 
 
@@ -156,7 +150,8 @@ int getDelay(int pot){
  * This feature is largely experimental and quite incomplete.
  * The idea is to involve multiple comets that can interact by colour-addition
  */
-void demo(void){
+void demo(void)
+{
     uint16_t i, j, k;
     uint16_t ofs = 15;
     
@@ -167,7 +162,7 @@ void demo(void){
         
         strip.show();
         delay(5);
-        if(getState(pot_1) != STATE_COMET) break; // Check if mode knob is still on this mode
+        if(getState(pot_1) != state_comet) break; // Check if mode knob is still on this mode
     }
 }
 
@@ -242,7 +237,7 @@ void rainbow(int pot) {
     strip.show();
     delay(getDelay(pot));
     
-    if(getState(pot_1) != STATE_RAINBOW) break; // Check if mode knob is still on this mode
+    if(getState(pot_1) != state_rainbow) break; // Check if mode knob is still on this mode
   }
 }
 
@@ -264,8 +259,8 @@ uint32_t Wheel(byte WheelPos) {
 
 // Display a single solid colour from the Wheel(), or show white with variable brightness
 int solid(int colour, int bright){
-    bright = map(bright,0,ADC_PREC,5,255);
-    int col = map(colour,0,ADC_PREC,0,255);
+    bright = map(bright,0,ADC_precision,5,255);
+    int col = map(colour,0,ADC_precision,0,255);
     uint16_t i;
     
     if (col > 245) {
