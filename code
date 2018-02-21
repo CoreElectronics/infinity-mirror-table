@@ -82,7 +82,6 @@ void loop()
     
     // Read potentiometer values for user-input
     int state = getState(pot_1);    // Select the operation mode
-    //int state = getFlexState(pot_1);
     int opt1 = analogRead(pot_2);   // Select animation speed
     int opt2 = analogRead(pot_3);   // A general-purpose option for other effects
     
