@@ -165,6 +165,21 @@ void demo(void)
     }
 }
 
+void comet2(void)
+{
+    uint16_t i, j, k;
+    uint16_t ofs = 15;
+    
+    for (j=0; j<strip.numPixels(); j++){
+        clearStrip();
+        
+        comet(j,1);
+        
+        strip.show();
+        delay(5);
+        if(getState(pot_1) != state_comet) break; // Check if mode knob is still on this mode
+    }
+}
 
 /*
  * Draw a comet on the strip and handle wrapping gracefully.
